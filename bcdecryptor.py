@@ -42,9 +42,9 @@ from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
     My packages
 """
 
-import bcexportkeyfile as bckeyfile
-import bcdatafile as bcdatafile
-import fnhelper
+import res.bcexportkeyfile as bckeyfile
+import res.bcdatafile as bcdatafile
+import res.fnhelper as fnhelper
 
 
 
