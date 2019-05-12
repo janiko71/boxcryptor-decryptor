@@ -1,6 +1,8 @@
 # boxcryptor-decryptor
 Single file decryption for BoxCryptor.
 
+It's only a beta version, displaying the file content. I will improve this program by adding a file in output and adding the handling of large files.
+
 ## What is BoxCryptor
 BoxCryptor is a commercial software (though you can use it freely with limitations) the encrypts files in the cloud (in its largest meaning, that is OneDrive (Microsoft), Google Drive, iCloud (Apple), ownCloud, Box, Dropbox, etc.
 All compatibles products are listed [here](https://www.boxcryptor.com/fr/providers/).
