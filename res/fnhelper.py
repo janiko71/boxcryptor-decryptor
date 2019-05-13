@@ -8,13 +8,16 @@ import getpass
 from cryptography.hazmat.primitives import hmac
 from cryptography.hazmat.primitives import hashes
 
+from colorama import Fore, Back, Style 
+
 # ---------------------------------------------------
 #
 #     Some useful functions
 #
 # ---------------------------------------------------
 
-
+TERM_UNDERLINE = '\033[04m'
+TERM_RESET     = '\033[0m'
 
 """
     Unique block init vector calculation
@@ -48,6 +51,80 @@ def compute_block_iv(cipher_iv, seed, key, backend):
     
     return res
 
+
+"""
+    Checking the command line arguments
+"""
+
+def check_arguments(arguments):
+
+    """
+        Check the arguments (if needed)
+
+        :param arguments: list of arguments
+        :type arguments: list
+        :return: owner ID
+        :rtype: string
+    """
+
+    new_arguments = {}
+    arg_error = False
+    b_ind = p_ind = 0
+
+    if (len(arguments) > 1):
+        first_arg = arguments[1]
+        if (first_arg[0] != '-'):
+            new_arguments["file"] = first_arg
+
+    if ("-h" in arguments) | ("--help" in arguments):
+        print_help()
+        arg_error = True
+        
+    if ("-b" in arguments):
+        b_ind = arguments.index("-b")
+    if ("--bckey" in arguments):
+        b_ind = arguments.index("--bckey")
+    if (b_ind > 0):
+        new_arguments["bckey"] = arguments[b_ind + 1]
+
+    if ("-p" in arguments):
+        p_ind = arguments.index("-p")
+    if ("--pwd" in arguments):
+        p_ind = arguments.index("--pwd")
+    if (p_ind > 0):
+        new_arguments["pwd"] = arguments[p_ind + 1]
+
+    # Sure it can be smarter code...
+    if (arg_error):
+        return
+    else:
+        return new_arguments
+
+
+"""
+    Printing help
+"""    
+
+def print_help():
+
+    """
+        Just print some help to use the program
+    """
+
+    print(Fore.LIGHTWHITE_EX + "USAGE" + Fore.RESET + "\n")
+    print("\tpython3 bcdecryptor.py [file] [options]\n")
+    print(Fore.LIGHTWHITE_EX + "DESCRIPTION" + Fore.RESET + "\n")
+    print("\tBoxcryptor decryptor, unofficial Python version. \n")
+    print("\tThis program is for information purpose only, no warranty of any kind (see license).\n")
+    print("\tThe file you want to decrypt must be the first argument.\n")
+    print("\t" + Fore.LIGHTWHITE_EX + "-b,--bckey " + Fore.RESET + TERM_UNDERLINE + "filepath\n" + TERM_RESET)
+    print("\t\tFilepath of the exported keys file (endind with .bckey)")
+    print("\t\tIf no filepath provided, we'll use the one configured the \'bcdecryptor.py\' file (" +
+          Fore.LIGHTWHITE_EX + "BCKEY_FILEPATH " + Fore.RESET + "constant).\n")
+    print("\t" + Fore.LIGHTWHITE_EX + "-p,--pwd " + Fore.RESET + TERM_UNDERLINE + "password\n" + TERM_RESET)
+    print("\t\tBoxcryptor's user password. If not provided, it will be asked (through the console input).\n")
+
+    return
 
 
 """
@@ -85,3 +162,8 @@ def print_data_file_info(data_file):
     return
 
 
+#
+# Hey, doc: we're in a module!
+#
+if (__name__ == '__main__'):
+    print('Module => Do not execute')

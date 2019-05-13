@@ -49,4 +49,8 @@ class ExportKeyFile:
         self.aes_key_bytes                = base64.b64decode(user["aesKey"])
         
 
-        
+#
+# Hey, doc: we're in a module!
+#
+if (__name__ == '__main__'):
+    print('Module => Do not execute')        

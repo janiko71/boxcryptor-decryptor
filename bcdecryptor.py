@@ -13,9 +13,10 @@
     Standard packages
 """
 
-import json
 import os
+import sys
 import pprint
+import json
 import base64
 import binascii as ba
 import getpass
@@ -48,43 +49,125 @@ import res.fnhelper as fnhelper
 
 
 
-
-# =================================================================
+# ===========================================================================
 #
-#  main() program
+#   main() program
 #
-# =================================================================
-
-"""
-    Here put the BoxCryptor exported keys filepath
-"""
-BCKEY_FILEPATH = "export.bckey"
+# ===========================================================================
 
 
+# -----------------------------------------------------------------
+#
+#  Reading arguments (in command line or in some configuration)
+#
+# -----------------------------------------------------------------
+
 """
-    Crypto init
+    Here we read the BoxCryptor exported keys.
+    The default filepath can be:
+        - Passed in command line
+        - Read in a config file (filepath : ALT_BCKEY_FILEPATH_CONFIGFILE)
+        - Else we use a default one, hard coded in DEFAULT_BCKEY_FILEPATH
+"""
+
+DEFAULT_BCKEY_FILEPATH        = "export.bckey"
+ALT_BCKEY_FILEPATH_CONFIGFILE = "bckey.txt"
+
+arguments = fnhelper.check_arguments(sys.argv)
+
+if (arguments == None):
+    exit()
+
+"""
+    Checking .bckey file argument (filepath)
 """    
-backend   = default_backend()
+if (arguments.get("bckey")):
+    
+    # If the .bckey file is provided in command line, we use it
+    bckey_filepath = arguments.get("bckey")
+    
+else:
+    
+    # no bckey file path provided. Let's check if there's one in a special config
+    # file; or else we use the default one.
+    if (os.path.isfile(ALT_BCKEY_FILEPATH_CONFIGFILE)):
+        
+        with open(ALT_BCKEY_FILEPATH_CONFIGFILE,"r",encoding="utf8") as f:
+            bckey_filepath = f.read()
+            print("Using .bckey filepath found in \'" + ALT_BCKEY_FILEPATH_CONFIGFILE + "\' (" +
+                  bckey_filepath + ")")
+            
+    else:
+        
+        print("Using default .bckey filepath (" + DEFAULT_BCKEY_FILEPATH +  ")")
+        bckey_filepath = DEFAULT_BCKEY_FILEPATH
 
 
 """
-    Reading key file
+    Now reading key file (mandatory)
 """
-keyfile = bckeyfile.ExportKeyFile(BCKEY_FILEPATH)
+keyfile = bckeyfile.ExportKeyFile(bckey_filepath)
 
 
 """
-    Reading data file
+    Reading data filepath
+"""
+if (arguments.get("file")):
+    
+    # Data filepath in commande line
+    data_filepath = arguments.get("file")
+    
+else:
+    
+    # no => input()
+    data_filepath = str(input("Data file: "))
+
+
+"""
+    Reading data file itself
 """    
-file_path = str(input("Data file: "))
-data_file = bcdatafile.DataFile(file_path)
+data_file = bcdatafile.DataFile(data_filepath)
+
+if (os.path.isfile(data_filepath)):
+    
+    print("Decrypting \'" + data_filepath + "\' file")
+    
+else:
+    
+    print("File \'" + data_filepath + "\' not found!")
+    exit()
+
+"""
+    Reading user's password
+"""
+if (arguments.get("pwd")):
+    
+    # password in command line
+    pwd = arguments.get("pwd")
+    
+else:
+    
+    # no => input()
+    pwd = str(getpass.getpass(prompt="Boxcryptor password :"))
 
 
 """
     Printing files info
 """
 fnhelper.print_data_file_info(data_file)
+ 
 
+
+# -----------------------------------------------------------------
+#
+#  Constructing crypto elements
+#
+# -----------------------------------------------------------------
+
+"""
+    Crypto init
+"""    
+backend   = default_backend()
 
 
 #
@@ -115,9 +198,6 @@ print("Public key imported.")
 #     The password should be unicode (UTF8) encoded
 #
 
-pwd     = str(getpass.getpass(prompt="Boxcryptor password :"))
-
-
 """
     Derivation of the user's password
 """
@@ -128,6 +208,7 @@ kdf = PBKDF2HMAC(
     iterations=keyfile.kdf_iterations,
     backend=backend
 )
+
 password_key = kdf.derive(pwd.encode())
 print("Password key created.")
 
@@ -168,8 +249,11 @@ h.update(private_key_bytes)
 calc_hash = h.finalize()
 
 if (calc_hash == given_hmac_hash):
+    
     print('HMAC verification ok')
+    
 else:
+    
     print('HMAC verification KO')
     raise Exception(
         "Problem in HMAC verification; the file may be spoofed waiting for {}, found {})".format(given_hmac_hash.hex(), calc_hash.hex())
@@ -217,8 +301,15 @@ crypto_key = the_file_aes_key[32:64]
 #print("AES file key.................. " + crypto_key.hex())
 print('-'*72)
 
+
+
+
+# -----------------------------------------------------------------
 #
-# DECRYPTION OF DATAS
+#  Data file decryption
+#
+# -----------------------------------------------------------------
+
 #
 # Decrypt the encrypted file key using the user’s private key. Decrypt the encrypted data using the file key.
 #
@@ -231,7 +322,6 @@ print('-'*72)
     Let's calculate the nb of blocks to decrypt. All block are 'data_file.cipher_blocksize', except the last
     which can be shorter, but with cryptography.io module, the padding is automatically done.
 """
-
 offset = 48 + data_file.header_core_length + data_file.header_padding_length
 encrypted_data_length = data_file.file_size - offset - data_file.cipher_padding_length
 nb_blocks = encrypted_data_length // data_file.cipher_blocksize
@@ -246,7 +336,11 @@ print("="*72)
 print("Start decrypting...")
 print("="*72)
 
+"""
+    Decrypts all the blocks
+"""    
 for block_nb in range (1, nb_blocks + 1):
+    
     block_range = block_nb * data_file.cipher_blocksize
     block = data_file.raw[block_range:block_range + data_file.cipher_blocksize]
     block_length = len(block)
