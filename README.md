@@ -29,7 +29,7 @@ You'll get a .bckey file. This file is very important and need some protection, 
 ### Secondly: your account password
 As a zero-knowledge solution, even with the previous file you won't be able to decrypt anything. So always remember your (strong) password, and keep it in a safe place (like [KeePass](https://keepass.info/)).
 
-### Install Python 3 and the requestes modules
+### Install Python 3 and the requested modules
 To be completed, but Python 3 with the [Cryptography](https://cryptography.io/en/latest/) module are mandatory.
 
 ## So,what is my conclusion?
