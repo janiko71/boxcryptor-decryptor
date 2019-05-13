@@ -20,6 +20,7 @@ import json
 import base64
 import binascii as ba
 import getpass
+import time
 
 from colorama import Fore, Back, Style 
 
@@ -229,6 +230,7 @@ kdf = PBKDF2HMAC(
 )
 
 password_key = kdf.derive(pwd.encode())
+pwd = None
 helper.print_parameter("Password key creation", "OK")
 
 
@@ -358,8 +360,13 @@ helper.print_parameter("Number of blocks to decrypt", nb_blocks)
 print()
 print("="*72)
 print("Start decrypting...")
-print("="*72)
+print("-"*72)
+print()
 
+"""
+    Execution time, for information
+"""    
+t0 = time.time()
 
 """
     Decrypts all the blocks
@@ -388,18 +395,25 @@ for block_nb in range (1, nb_blocks + 1):
     decryptor.finalize()
 
     # Padding exception for the last block
-    print("block_nb",block_nb)
-    print("nb_blocks",nb_blocks)
+    progression = (block_nb / nb_blocks * 100)
+    print("Fileblock #{}, progression {:6.2f} %".format(block_nb, progression), end="\r", flush=True)
     if (block_nb == nb_blocks):
         decrypted_block = decrypted_block[:-data_file.cipher_padding_length]
-    print("(#{}) {}".format(block_nb,decrypted_block))
+    #print("(#{}) {}".format(block_nb,decrypted_block))
     f_out.write(decrypted_block)
-    print('---')
 
 f_in.close
 f_out.close()
 
-print("="*72)
+"""
+    Execution time, for information
+"""    
+execution_time = time.time() - t0
+
+print("{} blocks decrypted in {:.2f} seconds".format(nb_blocks, execution_time))
+
+print()
+print("-"*72)
 print("End of decrypting...")
 print("="*72)
 
