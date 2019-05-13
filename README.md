@@ -1,8 +1,6 @@
 # boxcryptor-decryptor
 Single file decryption for BoxCryptor.
 
-It's only a beta version, displaying the file content. I will improve this program by adding a file in output and adding the handling of large files.
-
 ## What is BoxCryptor
 BoxCryptor is a commercial software (though you can use it freely with limitations) the encrypts files in the cloud (in its largest meaning, that is OneDrive (Microsoft), Google Drive, iCloud (Apple), ownCloud, Box, Dropbox, etc.
 All compatibles products are listed [here](https://www.boxcryptor.com/fr/providers/).
@@ -38,3 +36,5 @@ To be completed, but Python 3 with the [Cryptography](https://cryptography.io/en
 First I'm proud of myself: I've understood all the underlying crypto! And coded all that into Python! And it works!
 
 Besides, I can see that BoxCryptor do what they say: they have implemented a zero-knowledge solution. That means that, without your password, nobody can decrypt your files, even them. But as usual, the ultimate proof of confidence would be to assess that your password is stored anywhere... 
+
+With my laptop, I've decrypted an .iso file (1.81Go) in 163 sec.
