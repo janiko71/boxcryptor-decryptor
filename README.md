@@ -14,7 +14,7 @@ And, at last, in the unlikely case of the company disapear, or if the executable
 Of course, the BoxCryptor solution encrypts and decrypts the files _on the fly_, and seems to work well. But as I've said, you can't audit the code. To prevent this, the editor published a decryptor (in Java and C++) here:
 * https://github.com/secomba/boxcryptor-single-file-decryptor
 
-Like my work, their programs are not really intended to be production-grade programs, but having this source code is a good way to understand how their crypto process work. As a challenge, I wanted to do a decryptor by myself, and because I have no relation with the editor, you have here an independant way of understanding it and to decrypt your files.
+Like my work, their programs are not really intended to be production-grade programs, but having this source code is a good way to understand how their crypto process works. As a challenge, I wanted to do a decryptor by myself, and because I have no relation with the editor, you have here an independant way of understanding it and to decrypt your files.
 
 ## How to use it?
 
