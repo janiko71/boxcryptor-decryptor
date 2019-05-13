@@ -129,13 +129,14 @@ else:
     Constructing output file name
 """
 encrypted_data_filename = os.path.basename(data_filepath)
-encrypted_data_fileext = encrypted_data_filename[-3:]
-new_filename = encrypted_data_filename[:3]
-output_data_filepath = os.path.dirname(data_filepath)
+encrypted_data_fileext  = encrypted_data_filename[-3:]
+data_directory          = os.path.dirname(data_filepath)
 
 if (encrypted_data_fileext != ".bc"):
-    print("Warning: the file you want to decrypt has a bad suffix (filename:" + encrypted_data_filename + ")")
-    
+    print("Error: the file you want to decrypt has a bad suffix (filename:" + encrypted_data_filename + ")")
+    exit(1)
+else:    
+    new_filename = encrypted_data_filename[:-3]
 
 """
     Reading data file itself
@@ -169,9 +170,9 @@ else:
     Printing files info
 """
 print('-'*72)
-helper.print_parameter("Filepath", output_data_filepath)
+helper.print_parameter("Data directory", data_directory)
 helper.print_parameter("File name (input)", encrypted_data_filename)
-helper.print_parameter("File name (output)", output_data_filepath)
+helper.print_parameter("File name (output)", new_filename)
 helper.print_data_file_info(data_file)
  
 
@@ -362,11 +363,19 @@ print("="*72)
 
 """
     Decrypts all the blocks
-"""    
+"""
+f_in  = open(data_filepath, "rb")
+f_out = open(new_filename, "wb")   # Yes, we overwrite the output file
+
+# Read the 1st block (header), not used here
+f_in.read(offset)
+
+# Now read all the encrypted blocks
 for block_nb in range (1, nb_blocks + 1):
     
     block_range = block_nb * data_file.cipher_blocksize
-    block = data_file.raw[block_range:block_range + data_file.cipher_blocksize]
+    #block = data_file.raw[block_range:block_range + data_file.cipher_blocksize]
+    block = f_in.read(data_file.cipher_blocksize)
     block_length = len(block)
     
     # Compute block IV, derived from IV
@@ -377,8 +386,18 @@ for block_nb in range (1, nb_blocks + 1):
     decryptor = cipher.decryptor()
     decrypted_block = decryptor.update(block)
     decryptor.finalize()
+
+    # Padding exception for the last block
+    print("block_nb",block_nb)
+    print("nb_blocks",nb_blocks)
+    if (block_nb == nb_blocks):
+        decrypted_block = decrypted_block[:-data_file.cipher_padding_length]
     print("(#{}) {}".format(block_nb,decrypted_block))
+    f_out.write(decrypted_block)
     print('---')
+
+f_in.close
+f_out.close()
 
 print("="*72)
 print("End of decrypting...")
