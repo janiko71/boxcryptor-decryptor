@@ -36,11 +36,13 @@ class DataFile:
             The init function is the constructor. All we need is the file path.
             We assume that there is no syntax or structure error in the file, and
             that Boxcryptor developpers don't code with their feet :o)
+
+            We only keep the 4096 first bytes of the file. 
         """
 
         self.filepath = data_filepath
         d_file = open(data_filepath, 'rb')
-        self.raw = d_file.read()
+        self.raw = d_file.read(4096)
 
         # 1st, get the boxcryptor specific header (48 bytes)
         file_header = self.raw[0:48]

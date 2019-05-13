@@ -128,35 +128,48 @@ def print_help():
 
 
 """
+    Some nice formatting
+"""
+
+def print_parameter(txt, param):
+
+    if (type(param) == int):
+        param = str(param)
+    txt_format = txt.ljust(40,".") + " " + Fore.LIGHTWHITE_EX + param + Fore.RESET
+    print(txt_format)
+
+    return
+
+"""
     Printing files info
 """
 
 def print_data_file_info(data_file):
 
     print('-'*72)
-    print("File version.................. " + data_file.version)
-    print("File size..................... " + str(data_file.file_size))
-    print("Header length................. " + str(data_file.header_core_length))
-    print("Header padding length......... " + str(data_file.header_padding_length))
-    print("Cipher padding length......... " + str(data_file.cipher_padding_length))
+    print_parameter("File version", data_file.version)
+    print_parameter("File size", str(data_file.file_size))
+    print_parameter("Header length", str(data_file.header_core_length))
+    print_parameter("Header padding length", str(data_file.header_padding_length))
+    print_parameter("Cipher padding length", str(data_file.cipher_padding_length))
     print('-'*72)
     print(data_file.crypto_json)
     print('-'*72)
     print(data_file.hash) # SHA384 of smth ?
     print('-'*72)
 
-    print("Algo.......................... {} ({} bits)".format(data_file.cipher_algo, data_file.cipher_keysize))
-    print("Bloc mode..................... " + data_file.cipher_mode)
-    print("Bloc size..................... " + str(data_file.cipher_blocksize))
-    print("Padding type.................. " + data_file.cipher_padding_mode)
-    print("File init vector.............. " + data_file.cipher_iv.hex())
-    print()
+    fparam = "{} ({} bits)".format(data_file.cipher_algo, data_file.cipher_keysize)
+    print_parameter("Algo", fparam)
+    print_parameter("Bloc mode", data_file.cipher_mode)
+    print_parameter("Bloc size", str(data_file.cipher_blocksize))
+    print_parameter("Padding type", data_file.cipher_padding_mode)
+    print_parameter("File init vector", data_file.cipher_iv.hex())
 
-    print("Load id....................... {} (type : {})".format(data_file.file_id, data_file.file_type))
+    fparam = "{} (type : {})".format(data_file.file_id, data_file.file_type)
+    print_parameter("Load id", fparam)
 
-    print()
-
-    print("AES file key, encrypted....... " + data_file.aes_key_encrypted_bytes.hex()[0:100] + "...")
+    fparam = data_file.aes_key_encrypted_bytes.hex()[0:100] + "..."
+    print_parameter("AES file key, encrypted", fparam)
     print('-'*72)
 
     return

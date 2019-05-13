@@ -21,6 +21,8 @@ import base64
 import binascii as ba
 import getpass
 
+from colorama import Fore, Back, Style 
+
 
 """
     Crypto packages
@@ -45,7 +47,7 @@ from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 
 import res.bcexportkeyfile as bckeyfile
 import res.bcdatafile as bcdatafile
-import res.fnhelper as fnhelper
+import res.fnhelper as helper
 
 
 
@@ -73,7 +75,7 @@ import res.fnhelper as fnhelper
 DEFAULT_BCKEY_FILEPATH        = "export.bckey"
 ALT_BCKEY_FILEPATH_CONFIGFILE = "bckey.txt"
 
-arguments = fnhelper.check_arguments(sys.argv)
+arguments = helper.check_arguments(sys.argv)
 
 if (arguments == None):
     exit()
@@ -124,13 +126,25 @@ else:
 
 
 """
+    Constructing output file name
+"""
+encrypted_data_filename = os.path.basename(data_filepath)
+encrypted_data_fileext = encrypted_data_filename[-3:]
+new_filename = encrypted_data_filename[:3]
+output_data_filepath = os.path.dirname(data_filepath)
+
+if (encrypted_data_fileext != ".bc"):
+    print("Warning: the file you want to decrypt has a bad suffix (filename:" + encrypted_data_filename + ")")
+    
+
+"""
     Reading data file itself
-"""    
-data_file = bcdatafile.DataFile(data_filepath)
+"""
 
 if (os.path.isfile(data_filepath)):
     
     print("Decrypting \'" + data_filepath + "\' file")
+    data_file = bcdatafile.DataFile(data_filepath)
     
 else:
     
@@ -154,7 +168,11 @@ else:
 """
     Printing files info
 """
-fnhelper.print_data_file_info(data_file)
+print('-'*72)
+helper.print_parameter("Filepath", output_data_filepath)
+helper.print_parameter("File name (input)", encrypted_data_filename)
+helper.print_parameter("File name (output)", output_data_filepath)
+helper.print_data_file_info(data_file)
  
 
 
@@ -182,7 +200,7 @@ public_key = serialization.load_der_public_key(
     keyfile.public_key_bytes,
     backend
 )
-print("Public key imported.")
+helper.print_parameter("Public key importation", "OK")
 
 
 #
@@ -210,7 +228,7 @@ kdf = PBKDF2HMAC(
 )
 
 password_key = kdf.derive(pwd.encode())
-print("Password key created.")
+helper.print_parameter("Password key creation", "OK")
 
 
 """
@@ -241,6 +259,7 @@ hmac_key   = password_key[32:]
 given_hmac_hash   = keyfile.encrypted_private_key_bytes[16:48]
 private_key_bytes = keyfile.encrypted_private_key_bytes[48:]
 
+
 """
     Hmac verification
 """
@@ -250,20 +269,24 @@ calc_hash = h.finalize()
 
 if (calc_hash == given_hmac_hash):
     
-    print('HMAC verification ok')
+    helper.print_parameter("HMAC verification", "OK")
+
     
 else:
     
-    print('HMAC verification KO')
-    raise Exception(
-        "Problem in HMAC verification; the file may be spoofed waiting for {}, found {})".format(given_hmac_hash.hex(), calc_hash.hex())
+    print(Fore.LIGHTWHITE_EX + 'HMAC verification KO' + Fore.RESET)
+    print(
+        "Problem in HMAC verification; the file may be spoofed waiting"
+        +" for {}, found {})\nYou may also mistyped the password.".format(given_hmac_hash.hex(), calc_hash.hex())
     )
+    exit()
+
 
 """
     Get the init vector
 """
 init_vector       = keyfile.encrypted_private_key_bytes[0:16]
-print("Init vector................... " + init_vector.hex())
+helper.print_parameter("Init vector", init_vector.hex())
 
 #
 # Now we have everything we need to decrypt the private key
@@ -279,7 +302,7 @@ the_private_key = serialization.load_der_private_key(
     None,
     backend)
 
-print("Private key decrypted and imported.")
+helper.print_parameter("Private key decryption and importation", "OK")
 
 
 #
@@ -296,9 +319,9 @@ the_file_aes_key = the_private_key.decrypt(
         label=None
     )
 )
-print("AES file key decrypted.")
+helper.print_parameter("AES file key decryption", "OK")
 crypto_key = the_file_aes_key[32:64]
-#print("AES file key.................. " + crypto_key.hex())
+#print_parameter("AES file key", crypto_key.hex())
 print('-'*72)
 
 
@@ -328,13 +351,14 @@ nb_blocks = encrypted_data_length // data_file.cipher_blocksize
 if ((encrypted_data_length % data_file.cipher_blocksize) != 0):
     nb_blocks += 1
 
-print("Encrypted data length......... "+str(encrypted_data_length))
-print("Offset........................ "+str(offset))
-print("Number of blocks to decrypt... "+str(nb_blocks))
+helper.print_parameter("Encrypted data length", encrypted_data_length)
+helper.print_parameter("Offset", offset)
+helper.print_parameter("Number of blocks to decrypt", nb_blocks)
 print()
 print("="*72)
 print("Start decrypting...")
 print("="*72)
+
 
 """
     Decrypts all the blocks
@@ -346,7 +370,7 @@ for block_nb in range (1, nb_blocks + 1):
     block_length = len(block)
     
     # Compute block IV, derived from IV
-    block_iv = fnhelper.compute_block_iv(data_file.cipher_iv, block_nb - 1, crypto_key, backend)
+    block_iv = helper.compute_block_iv(data_file.cipher_iv, block_nb - 1, crypto_key, backend)
 
     # Setting parameters for AES decryption (the key and the init vector)
     cipher = Cipher(algorithms.AES(crypto_key), modes.CBC(block_iv), backend=backend)
@@ -359,6 +383,7 @@ for block_nb in range (1, nb_blocks + 1):
 print("="*72)
 print("End of decrypting...")
 print("="*72)
+
 
 #
 # Notes:
