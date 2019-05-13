@@ -6,7 +6,7 @@ BoxCryptor is a commercial software (though you can use it freely with limitatio
 All compatibles products are listed [here](https://www.boxcryptor.com/fr/providers/).
 
 ## Why this program?
-Because I'm paranoid (I'm working in a big european bank as security officer/expert), and I wanted to understand the crypto process of the BoxCryptor solution, zero-knowledge based. The best way to do that is to write my own dexcrypting program, in Python 3 (because I like Python 3).
+Because I'm paranoid (I'm working in a big european bank as security officer/expert), and I wanted to understand the crypto process of the BoxCryptor solution (zero-knowledge based). The best way to do that is to write my own decrypting program, in Python 3 (because I like Python 3).
 Secondly, like every commercial program, you can't access the source code to audit it, and the documentation is often too incomplete for auditing purpose. 
 And, at last, in the unlikely case of the company disapear, or if the executable files are lost or too old to be used, you may want a program to decrypt your files. That's what is done here.
 
