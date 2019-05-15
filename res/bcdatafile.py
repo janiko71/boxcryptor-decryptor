@@ -14,11 +14,11 @@ import binascii as ba
 # The data file also contains crypto information we need to gather. The file structure depends on the cipher blocksize,
 # which is one of the information within the file.
 #
-# In the file structure, the first block is reserved for the BoxCryptor header. This block size is calculated as
+# In the file structure, the first block is reserved for the boxcryptor header. This block size is calculated as
 # 'offset', and it's padded with NUL (\x00)
 #
 # +-------------+-------------+-----------+----------------+----------------+-------...------------+
-# | BoxCryptor  | Json with   | Padding   | Encrypted      | Encrypted      |       ...            |
+# | boxcryptor  | Json with   | Padding   | Encrypted      | Encrypted      |       ...            |
 # | header      | crypto info | with \x00 | data block #1  | data block #2  |       ...            |
 # | (48 bytes)  |             |           |                |                |       ...            |
 # +-------------+-------------+-----------+----------------+----------------+-------...------------+

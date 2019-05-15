@@ -1,12 +1,12 @@
 # ----------------------------------------------------------
 #
-#                   BoxCryptor Decryptor
+#                   Boxcrypto Decryptor
 #
 # ----------------------------------------------------------
 
 #
 # This program is intended to decrypt a SINGLE encrypted file (what a surprise!)
-# from the BoxCryptor solution.
+# from the Boxcrypto solution.
 #
 
 """
@@ -66,7 +66,7 @@ import res.fnhelper as helper
 # -----------------------------------------------------------------
 
 """
-    Here we read the BoxCryptor exported keys.
+    Here we read the Boxcrypto exported keys.
     The default filepath can be:
         - Passed in command line
         - Read in a config file (filepath : ALT_BCKEY_FILEPATH_CONFIGFILE)
