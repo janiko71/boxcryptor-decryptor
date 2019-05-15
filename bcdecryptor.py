@@ -324,7 +324,7 @@ the_file_aes_key = the_private_key.decrypt(
 )
 helper.print_parameter("AES file key decryption", "OK")
 crypto_key = the_file_aes_key[32:64]
-#print_parameter("AES file key", crypto_key.hex())
+#print_parameter("AES file key", crypto_key.hex()) ==> only if you want it
 print('-'*72)
 
 
@@ -399,7 +399,6 @@ for block_nb in range (1, nb_blocks + 1):
     print("Fileblock #{}, progression {:6.2f} %".format(block_nb, progression), end="\r", flush=True)
     if (block_nb == nb_blocks):
         decrypted_block = decrypted_block[:-data_file.cipher_padding_length]
-    #print("(#{}) {}".format(block_nb,decrypted_block))
     f_out.write(decrypted_block)
 
 f_in.close
