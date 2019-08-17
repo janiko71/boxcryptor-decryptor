@@ -1,12 +1,12 @@
 # ----------------------------------------------------------
 #
-#                   Boxcrypto Decryptor
+#                   Boxcryptor Decryptor
 #
 # ----------------------------------------------------------
 
 #
 # This program is intended to decrypt a SINGLE encrypted file (what a surprise!)
-# from the Boxcrypto solution.
+# from the Boxcryptor solution.
 #
 
 """
@@ -66,7 +66,7 @@ import res.fnhelper as helper
 # -----------------------------------------------------------------
 
 """
-    Here we read the Boxcrypto exported keys.
+    Here we read the Boxcryptor exported keys.
     The default filepath can be:
         - Passed in command line
         - Read in a config file (filepath : ALT_BCKEY_FILEPATH_CONFIGFILE)
@@ -164,7 +164,7 @@ if (arguments.get("pwd")):
 else:
     
     # no => input()
-    pwd = str(getpass.getpass(prompt="Boxcryptor password :"))
+    pwd = str(getpass.getpass(prompt="Boxcryptorr password :"))
 
 
 """
@@ -425,9 +425,4 @@ print("="*72)
 # --> Wrapping key: This key is the root AES key which is used to encrypt all other AES keys stored on our servers.
 #
 # --> Filename key: This key is used to encrypt filenames if filename encryption is enabled.
-
-
-
-
-
 
