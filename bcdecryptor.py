@@ -164,7 +164,7 @@ if (arguments.get("pwd")):
 else:
     
     # no => input()
-    pwd = str(getpass.getpass(prompt="Boxcryptorr password :"))
+    pwd = str(getpass.getpass(prompt="Boxcryptor password :"))
 
 
 """
@@ -425,4 +425,3 @@ print("="*72)
 # --> Wrapping key: This key is the root AES key which is used to encrypt all other AES keys stored on our servers.
 #
 # --> Filename key: This key is used to encrypt filenames if filename encryption is enabled.
-
