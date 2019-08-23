@@ -35,8 +35,8 @@ def compute_block_iv(cipher_iv, seed, key, backend):
         number, and the file's AES key)
     """
 
-    tmp_data = bytearray(8)
-    tmp_data[0:8] = cipher_iv
+    tmp_data = bytearray(16)
+    tmp_data[0:16] = cipher_iv
 
     for i in range(0,8):
         b = seed & 255
