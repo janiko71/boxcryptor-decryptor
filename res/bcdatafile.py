@@ -59,7 +59,7 @@ class DataFile:
 
         # JSON data (file content and encryption information)
         #crypto_json_txt  = d_file.read(self.header_core_length)
-        crypto_json_txt  = self.raw[48:48+self.header_core_length]
+        crypto_json_txt  = self.raw[48:48+self.header_core_length].decode('utf-8')
         self.crypto_json = json.loads(crypto_json_txt)
 
         # JSON Parsing
