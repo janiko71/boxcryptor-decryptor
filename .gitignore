@@ -1,3 +1,7 @@
 *.txt
+!requirements.txt
 *.bc
+*.bckey
+*.cfg
 res/__pycache__
+venv/
