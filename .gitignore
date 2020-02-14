@@ -4,4 +4,6 @@
 *.bckey
 *.cfg
 res/__pycache__
+tests/__pycache__
 venv/
+.vscode/
