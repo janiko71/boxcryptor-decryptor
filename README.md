@@ -38,7 +38,7 @@ To be completed, but Python 3 with the [Cryptography](https://cryptography.io/en
 ## So, what is my conclusion?
 First, I'm proud of myself: I've understood all the underlying crypto! And coded all that into Python! And it works!
 
-Besides, I can see that Boxcryptor do what they say: they have implemented a zero-knowledge solution. That means that, without your password, nobody can decrypt your files, even them. But as usual, the ultimate proof of confidence would be to assess that your password is stored anywhere... 
+Besides, I can see that Boxcryptor do what they say: they have implemented a zero-knowledge solution. That means that, without your password, nobody can decrypt your files, even them. But as usual, the ultimate proof of confidence would be to assess that your password is stored nowhere... 
 
 With my laptop, I've decrypted an .iso file (1.81Go) in 163 sec.
 
