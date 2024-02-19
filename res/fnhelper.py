@@ -4,6 +4,7 @@ import pprint
 import base64
 import binascii as ba
 import getpass
+import shutil
 
 from cryptography.hazmat.primitives import hmac
 from cryptography.hazmat.primitives import hashes
@@ -74,7 +75,7 @@ def check_arguments(arguments):
     if (len(arguments) > 1):
         first_arg = arguments[1]
         if (first_arg[0] != '-'):
-            new_arguments["file"] = first_arg
+            new_arguments["filepath"] = first_arg
 
     if ("-h" in arguments) | ("--help" in arguments):
         print_help()
@@ -112,11 +113,11 @@ def print_help():
     """
 
     print(Fore.LIGHTWHITE_EX + "USAGE" + Fore.RESET + "\n")
-    print("\tpython3 bcdecryptor.py [file] [options]\n")
+    print("\tpython3 bcdecryptor.py [filepath] [options]\n")
     print(Fore.LIGHTWHITE_EX + "DESCRIPTION" + Fore.RESET + "\n")
-    print("\tBoxcryptor decryptor, unofficial Python version. \n")
+    print("\tBoxcryptor decryptor, unofficial Python version. This version decrypts all the files in a directory (recursively).\n")
     print("\tThis program is for information purpose only, no warranty of any kind (see license).\n")
-    print("\tThe file you want to decrypt must be the first argument.\n")
+    print("\tThe directory you want to decrypt must be the first argument.\n")
     print("\t" + Fore.LIGHTWHITE_EX + "-b,--bckey " + Fore.RESET + TERM_UNDERLINE + "filepath\n" + TERM_RESET)
     print("\t\tFilepath of the exported keys file (endind with .bckey)")
     print("\t\tIf no filepath provided, we'll use the one configured the \'bcdecryptor.py\' file (" +
@@ -171,6 +172,40 @@ def print_data_file_info(data_file):
     fparam = data_file.aes_key_encrypted_bytes.hex()[0:100] + "..."
     print_parameter("AES file key, encrypted", fparam)
     print('-'*72)
+
+    return
+
+
+"""
+    Getting encrypted files list for a filepath
+"""
+
+def traverse_directory(filepath, extension=".bc"):
+
+    file_list = []
+    nb_files_in_directory = 0
+
+    for root, subdirs, files in os.walk(filepath):
+        for file in files:
+            nb_files_in_directory = nb_files_in_directory + 1
+            if file.endswith(extension):
+                full_path = os.path.join(root, file)
+                file_list.append(full_path)
+
+    return file_list, len(file_list), nb_files_in_directory
+
+
+"""
+    Display progression
+"""
+
+def display_progression(filename, block_nb, progression, overall_progression):
+
+    terminal_size = shutil.get_terminal_size()
+    format_txt = Fore.LIGHTWHITE_EX + "{}" + Fore.RESET + ", Fileblock #{}, file progression {:6.2f} %, overall progession {:6.2f} %"
+    displayed_text = format_txt.format(filename, block_nb, progression, overall_progression)
+    reset_text = " " * max(0, terminal_size.columns - len(displayed_text))
+    print(displayed_text + reset_text, end="\r", flush=True)
 
     return
 
