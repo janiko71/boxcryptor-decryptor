@@ -202,8 +202,8 @@ def traverse_directory(filepath, extension=".bc"):
 def display_progression(filename, block_nb, progression, overall_progression):
 
     terminal_size = shutil.get_terminal_size()
-    format_txt = Fore.LIGHTWHITE_EX + "{}" + Fore.RESET + ", Fileblock #{}, file progression {:6.2f} %, overall progession {:6.2f} %"
-    displayed_text = format_txt.format(filename, block_nb, progression, overall_progression)
+    format_txt = "overall progession {:6.2f} %, file " + Fore.LIGHTWHITE_EX + "{}" + Fore.RESET + ", fileblock #{}, file progression {:6.2f} %"
+    displayed_text = format_txt.format(overall_progression, filename, block_nb, progression)
     reset_text = " " * max(0, terminal_size.columns - len(displayed_text))
     print(displayed_text + reset_text, end="\r", flush=True)
 

@@ -151,6 +151,8 @@ def decrypt_file(filename):
     # Read the 1st block (header), not used here
     f_in.read(offset)
 
+    overall_progression = nb_decrypted_files / nb_encrypted_files * 100
+
     # Now read all the encrypted blocks
     for block_nb in range (1, nb_blocks + 1):
         
@@ -170,14 +172,15 @@ def decrypt_file(filename):
 
         # Padding exception for the last block
         progression = (block_nb / nb_blocks * 100)
-        overall_progression = nb_decrypted_files / nb_encrypted_files * 100
+        
         helper.display_progression(encrypted_data_filename[:-3], block_nb, progression, overall_progression)
         if (block_nb == nb_blocks):
             decrypted_block = decrypted_block[:-data_file.cipher_padding_length]
         f_out.write(decrypted_block)
 
     nb_decrypted_files = nb_decrypted_files + 1
-    helper.display_progression(encrypted_data_filename[:-3], block_nb, progression, overall_progression)
+    overall_progression = nb_decrypted_files / nb_encrypted_files * 100
+    helper.display_progression(encrypted_data_filename[:-3], nb_blocks + 1, 100, overall_progression)
 
     f_in.close
     f_out.close()
