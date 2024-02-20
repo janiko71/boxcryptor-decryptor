@@ -176,12 +176,12 @@ def decrypt_file(filename):
             decrypted_block = decrypted_block[:-data_file.cipher_padding_length]
         f_out.write(decrypted_block)
 
+        nb_decrypted_files = nb_decrypted_files + 1
+        helper.display_progression(encrypted_data_filename[:-3], block_nb, progression, overall_progression)
+
     f_in.close
     f_out.close()
-
     
-    nb_decrypted_files = nb_decrypted_files + 1
-    helper.display_progression(encrypted_data_filename[:-3], block_nb, progression, overall_progression)
     
     execution_time = time.time() - t0
 
