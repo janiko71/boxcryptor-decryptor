@@ -453,6 +453,7 @@ print('-'*72)
 for file in file_list:
     decrypt_file(file)
 
+print()
 
 #
 # Notes:
