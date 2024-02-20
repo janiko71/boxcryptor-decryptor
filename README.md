@@ -1,5 +1,5 @@
 # boxcryptor-decryptor
-Single file decryption for Boxcryptor. There is also a [Go version](https://github.com/janiko71/boxcryptor-decryptor-go).
+File decryption for Boxcryptor. For a single file decryption, there is also a [Go version](https://github.com/janiko71/boxcryptor-decryptor-go). Here you have both a single file or a directory decryptor. The single file is  ```bcdecryptor.py```, the directory decryptor is ```dir_bcdecryptor.py```.
 
 ## Security status
 ![CodeQL](https://github.com/janiko71/boxcryptor-decryptor/workflows/CodeQL/badge.svg)
