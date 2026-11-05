@@ -116,10 +116,10 @@ keyfile = bckeyfile.ExportKeyFile(bckey_filepath)
 """
     Reading data filepath
 """
-if (arguments.get("file")):
+if (arguments.get("filepath")):
     
     # Data filepath in commande line
-    data_filepath = arguments.get("file")
+    data_filepath = arguments.get("filepath")
     
 else:
     
