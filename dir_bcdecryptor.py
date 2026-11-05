@@ -116,7 +116,6 @@ def decrypt_file(filename):
     logging.info("AES file key decryption OK, decrypting \'" + filename + "\'")
     crypto_key = the_file_aes_key[32:64]
     # ==> only if you want it
-    logging.debug("AES file key:" + crypto_key.hex()) 
 
     #
     # Decrypt the encrypted file key using the user’s private key. Decrypt the encrypted data using the file key.
