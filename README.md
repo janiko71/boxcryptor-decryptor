@@ -35,6 +35,18 @@ As a zero-knowledge solution, even with the previous file, you won't be able to 
 ### Install Python 3 and the requested modules
 To be completed, but Python 3 with the [Cryptography](https://cryptography.io/en/latest/) module is mandatory.
 
+### Encrypted file names (filename encryption)
+If you had enabled Boxcryptor's *filename encryption*, your files and folders have names made of CJK-looking
+characters, such as `倐姁宸壮凕娗吓墭塽堦䃸.bc`. Both tools decrypt those names as well, using the `keys.filename`
+entry of your `.bckey` (it is unlocked with your password through the *wrapping key*). ```bcdecryptor.py```
+writes the output file under its real name; ```dir_bcdecryptor.py``` writes the whole tree, with every folder
+and file name decrypted, into a sibling folder of the encrypted one (named after the decrypted root folder).
+Without filename encryption the behaviour is unchanged: files are decrypted in place, next to the `.bc` file.
+
+The name format (Secomba's open-source [Base4K](https://github.com/secomba/base4k) encoding of a tag, a key
+holder hash, a 5-byte HMAC and a length-preserving two-pass AES-CFB ciphertext) is documented and implemented in
+```res/fnnames.py```. Single-user key files only; names encrypted for groups are left as they are.
+
 ## So, what is my conclusion?
 First, I'm proud of myself: I've understood all the underlying crypto! And coded all that into Python! And it works!
 

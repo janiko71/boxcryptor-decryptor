@@ -55,6 +55,7 @@ from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 import res.bcexportkeyfile as bckeyfile
 import res.bcdatafile as bcdatafile
 import res.fnhelper as helper
+import res.fnnames as fnnames
 
 
 #
@@ -83,8 +84,23 @@ def decrypt_file(filename):
 
     if (encrypted_data_fileext != ".bc"):
         logging.info("Error: the file you want to decrypt has a bad suffix (filename:" + encrypted_data_filename + ")")
-    else:
+        return
+
+    if (filename_key is None):
+
+        # No filename encryption: decrypt in place, next to the .bc file (historical behaviour)
         new_filename = os.path.join(data_directory, encrypted_data_filename[:-3])
+
+    else:
+
+        # Filename encryption: every path component is encrypted too, so the plaintext tree is written
+        # as a sibling of the source root, with every folder and file name decrypted.
+        relative_dir = os.path.relpath(data_directory, source_root)
+        components   = [] if (relative_dir == ".") else relative_dir.split(os.sep)
+        output_dir   = os.path.join(dest_root, *[fnnames.decrypt_filename(c, filename_key, keyfile.user_id) for c in components])
+        os.makedirs(output_dir, exist_ok=True)
+        new_filename = os.path.join(output_dir, fnnames.decrypt_filename(encrypted_data_filename, filename_key, keyfile.user_id))
+        logging.info("Decrypted name: " + encrypted_data_filename + " -> " + os.path.relpath(new_filename, dest_root))
 
     """
         Reading data file itself
@@ -428,6 +444,48 @@ the_private_key = serialization.load_der_private_key(
     backend)
 
 helper.print_parameter("Private key decryption and importation", "OK")
+
+
+#
+# Filename key (optional)
+# =======================
+#
+# --> Present when filename encryption was enabled. keys.filename in the .bckey is a "wrapped blob"
+#     (IV | HMAC-SHA256 | AES-256-CBC) encrypted with the wrapping key, which is itself a wrapped blob
+#     encrypted with the password key. The plaintext is a 64-byte AesKey (encryption half | hashing half).
+#     Encrypted names are Base4K strings; see res/fnnames.py for the format and the cipher.
+#
+
+filename_key = None
+
+if (keyfile.filename_key_wrapped_bytes is not None):
+
+    try:
+        wrapping_key = fnnames.decrypt_wrapped(keyfile.wrapping_key_bytes, crypto_key, hmac_key)
+        filename_key = fnnames.decrypt_wrapped(keyfile.filename_key_wrapped_bytes, wrapping_key[:32], wrapping_key[32:64])
+        wrapping_key = None
+        helper.print_parameter("Filename key decryption", "OK")
+
+    except Exception as e:
+        helper.print_parameter("Filename key decryption", "KO (" + str(e) + "), names will stay encrypted")
+
+else:
+
+    helper.print_parameter("Filename key", "none in key file (filename encryption was not enabled)")
+
+"""
+    Output location
+"""
+source_root = os.path.abspath(data_filepath.rstrip(os.sep))
+dest_root   = None
+
+if (filename_key is not None):
+
+    root_name = fnnames.decrypt_filename(os.path.basename(source_root), filename_key, keyfile.user_id)
+    if (root_name == os.path.basename(source_root)):
+        root_name = root_name + "_decrypted"      # root folder name was not encrypted
+    dest_root = os.path.join(os.path.dirname(source_root), root_name)
+    helper.print_parameter("Decrypted root folder", dest_root)
 
 print('-'*72)
 

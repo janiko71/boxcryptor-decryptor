@@ -32,7 +32,7 @@ class ExportKeyFile:
         self.filepath = bckey_filepath
 
         # Read the file
-        with open(self.filepath, "r") as f_keys:
+        with open(self.filepath, "r", encoding="utf-8-sig") as f_keys:  # key exports carry a UTF-8 BOM
             key_list = json.loads(f_keys.read())
 
         # Get the kindom keys for the first user (we'll look at multiusers later...)
@@ -47,6 +47,10 @@ class ExportKeyFile:
         self.public_key_bytes             = base64.b64decode(user["publicKey"])
         self.wrapping_key_bytes           = base64.b64decode(user["wrappingKey"])
         self.aes_key_bytes                = base64.b64decode(user["aesKey"])
+
+        # Filename encryption (optional): user id selects the key holder, keys.filename is the wrapped name key
+        self.user_id                      = user["id"]
+        self.filename_key_wrapped_bytes   = base64.b64decode(user["keys"]["filename"]) if "filename" in user.get("keys", {}) else None
         
 
 #

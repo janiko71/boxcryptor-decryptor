@@ -50,6 +50,7 @@ from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 import res.bcexportkeyfile as bckeyfile
 import res.bcdatafile as bcdatafile
 import res.fnhelper as helper
+import res.fnnames as fnnames
 
 
 
@@ -307,6 +308,41 @@ the_private_key = serialization.load_der_private_key(
     backend)
 
 helper.print_parameter("Private key decryption and importation", "OK")
+
+
+#
+# Filename key (optional)
+# =======================
+#
+# --> Present when filename encryption was enabled. keys.filename in the .bckey is a "wrapped blob"
+#     (IV | HMAC-SHA256 | AES-256-CBC) encrypted with the wrapping key, which is itself a wrapped blob
+#     encrypted with the password key. The plaintext is a 64-byte AesKey (encryption half | hashing half).
+#     Encrypted names are Base4K strings; see res/fnnames.py for the format and the cipher.
+#
+
+filename_key = None
+
+if (keyfile.filename_key_wrapped_bytes is not None):
+
+    try:
+        wrapping_key = fnnames.decrypt_wrapped(keyfile.wrapping_key_bytes, crypto_key, hmac_key)
+        filename_key = fnnames.decrypt_wrapped(keyfile.filename_key_wrapped_bytes, wrapping_key[:32], wrapping_key[32:64])
+        wrapping_key = None
+        helper.print_parameter("Filename key decryption", "OK")
+
+    except Exception as e:
+        helper.print_parameter("Filename key decryption", "KO (" + str(e) + "), names will stay encrypted")
+
+else:
+
+    helper.print_parameter("Filename key", "none in key file (filename encryption was not enabled)")
+
+if (filename_key is not None):
+
+    decrypted_filename = fnnames.decrypt_filename(encrypted_data_filename, filename_key, keyfile.user_id)
+    if (decrypted_filename != encrypted_data_filename[:-3]):
+        new_filename = decrypted_filename
+        helper.print_parameter("File name (decrypted)", new_filename)
 
 
 #
