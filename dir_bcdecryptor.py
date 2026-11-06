@@ -118,9 +118,7 @@ def decrypt_file(filename):
 
         # Filename encryption: every path component is encrypted too, so the plaintext tree is written
         # as a sibling of the source root, with every folder and file name decrypted.
-        relative_dir = os.path.relpath(data_directory, source_root)
-        components   = [] if (relative_dir == ".") else relative_dir.split(os.sep)
-        output_dir   = os.path.join(dest_root, *[fnnames.decrypt_filename(c, filename_key, keyfile.user_id, is_directory=True) for c in components])
+        output_dir   = dir_map.get(data_directory, dest_root)     # directories were mapped and created above
         new_filename = os.path.join(output_dir, fnnames.decrypt_filename(encrypted_data_filename, filename_key, keyfile.user_id))
 
         # Decrypted names are untrusted data: never let one escape the destination tree
@@ -524,6 +522,46 @@ if (filename_key is not None):
         root_name = root_name + "_decrypted"      # root folder name was not encrypted
     dest_root = os.path.join(os.path.dirname(source_root), root_name)
     helper.print_parameter("Decrypted root folder", dest_root)
+
+"""
+    Output tree (filename encryption only)
+
+    Every directory of the source tree is recreated under dest_root with its decrypted name, empty ones
+    included, and files that are not Boxcryptor containers are copied as they are. FolderKey.bch, the
+    per-folder key container, is not copied: it has no meaning outside the encrypted tree.
+"""
+dir_map = {}            # source directory -> destination directory
+nb_plain_copied = 0
+
+if (dest_root is not None):
+
+    dir_map[source_root] = dest_root
+
+    for current_dir, subdirs, files in os.walk(source_root):
+
+        subdirs.sort()
+        out_dir = dir_map[current_dir]
+        os.makedirs(out_dir, exist_ok=True)
+
+        for d in subdirs:
+            target = os.path.join(out_dir, fnnames.decrypt_filename(d, filename_key, keyfile.user_id, is_directory=True))
+            if (not fnnames.is_inside(target, dest_root)):
+                target = os.path.join(out_dir, "_" + d)
+            dir_map[os.path.join(current_dir, d)] = target
+
+        for f in files:
+            if (f == "FolderKey.bch") or f.endswith(".bc"):
+                continue
+            target = os.path.join(out_dir, fnnames.decrypt_filename(f, filename_key, keyfile.user_id))
+            if (not fnnames.is_inside(target, dest_root)) or (not claim_output_path(target)):
+                nb_skipped_files = nb_skipped_files + 1
+                logging.warning("Plain file not copied (exists or collides): " + os.path.join(current_dir, f))
+                continue
+            shutil.copy2(os.path.join(current_dir, f), target)
+            nb_plain_copied = nb_plain_copied + 1
+
+    helper.print_parameter("Directories created", str(len(dir_map)))
+    helper.print_parameter("Plain (non-.bc) files copied", str(nb_plain_copied))
 
 print('-'*72)
 
