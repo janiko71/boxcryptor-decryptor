@@ -409,7 +409,10 @@ t0 = time.time()
     Decrypts all the blocks
 """
 f_in  = open(data_filepath, "rb")
-f_out = open(new_filename, "wb")   # Yes, we overwrite the output file
+if (os.path.exists(new_filename) and not arguments.get("overwrite")):
+    print(Fore.RED + "Output file already exists, refusing to overwrite (use -f/--overwrite): " + new_filename + Fore.RESET)
+    exit(1)
+f_out = open(new_filename, "wb")
 
 # Read the 1st block (header), not used here
 f_in.read(offset)

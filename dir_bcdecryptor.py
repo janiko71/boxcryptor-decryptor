@@ -70,9 +70,32 @@ LOG_LEVEL = logging.DEBUG
 #
 # ===========================================================================
 
+output_paths_claimed = set()
+nb_skipped_files = 0
+
+def claim_output_path(path):
+
+    """
+        Collision / overwrite guard for one output path.
+
+        Two different encrypted names may decrypt to the same plaintext name, or to names that only differ
+        by case (which collide on Windows and macOS), and a previous run may have left files behind.
+        Unless -f/--overwrite was given, an output path is written at most once per run and never over
+        an existing file.
+    """
+
+    key = os.path.normcase(os.path.realpath(path)).casefold()
+    if (key in output_paths_claimed):
+        return False
+    if (os.path.exists(path) and not overwrite_outputs):
+        return False
+    output_paths_claimed.add(key)
+    return True
+
+
 def decrypt_file(filename):
 
-    global nb_encrypted_files, nb_decrypted_files
+    global nb_encrypted_files, nb_decrypted_files, nb_skipped_files
 
     """
         Constructing output file name
@@ -108,6 +131,12 @@ def decrypt_file(filename):
 
         os.makedirs(output_dir, exist_ok=True)
         logging.info("Decrypted name: " + encrypted_data_filename + " -> " + os.path.relpath(new_filename, dest_root))
+
+    if (not claim_output_path(new_filename)):
+        nb_skipped_files = nb_skipped_files + 1
+        logging.warning("Output exists or collides with another decrypted file, skipping: " + new_filename)
+        print(Fore.YELLOW + "Skipping (output exists or collides, use -f to overwrite): " + os.path.basename(new_filename) + Fore.RESET)
+        return
 
     """
         Reading data file itself
@@ -320,6 +349,8 @@ else:
 """
 print('-'*72)
 helper.print_parameter("Data directory", data_filepath)
+overwrite_outputs = bool(arguments.get("overwrite"))
+helper.print_parameter("Overwrite existing outputs", "yes" if overwrite_outputs else "no (use -f/--overwrite)")
  
 
 
@@ -518,6 +549,8 @@ for file in file_list:
     decrypt_file(file)
 
 print()
+helper.print_parameter("Nb of files decrypted", nb_decrypted_files)
+helper.print_parameter("Nb of files skipped (existing/collision)", nb_skipped_files)
 
 #
 # Notes:

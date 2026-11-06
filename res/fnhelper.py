@@ -95,6 +95,9 @@ def check_arguments(arguments):
     if (p_ind > 0):
         new_arguments["pwd"] = arguments[p_ind + 1]
 
+    # Existing output files are never overwritten unless explicitly allowed
+    new_arguments["overwrite"] = ("-f" in arguments) or ("--overwrite" in arguments)
+
     # Sure it can be smarter code...
     if (arg_error):
         return
@@ -124,6 +127,10 @@ def print_help():
           Fore.LIGHTWHITE_EX + "BCKEY_FILEPATH " + Fore.RESET + "constant).\n")
     print("\t" + Fore.LIGHTWHITE_EX + "-p,--pwd " + Fore.RESET + TERM_UNDERLINE + "password\n" + TERM_RESET)
     print("\t\tBoxcryptor's user password. If not provided, it will be asked (through the console input).\n")
+    print("\t" + Fore.LIGHTWHITE_EX + "-f,--overwrite " + Fore.RESET + "\n")
+    print("\t\tOverwrite output files that already exist. By default an existing file is left alone and")
+    print("\t\ttwo encrypted names that decrypt to the same output path (also when they differ only by case)")
+    print("\t\tare reported and skipped.\n")
 
     return
 
