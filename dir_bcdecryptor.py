@@ -488,7 +488,7 @@ dest_root   = None
 
 if (filename_key is not None):
 
-    root_name = fnnames.decrypt_filename(os.path.basename(source_root), filename_key, keyfile.user_id)
+    root_name = fnnames.decrypt_filename(os.path.basename(source_root), filename_key, keyfile.user_id, is_directory=True)
     if (root_name == os.path.basename(source_root)):
         root_name = root_name + "_decrypted"      # root folder name was not encrypted
     dest_root = os.path.join(os.path.dirname(source_root), root_name)
