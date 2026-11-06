@@ -14,6 +14,7 @@ Nothing here prints key material.  Replaces the (wrong, base64-based) _decrypt_m
 """
 import base64
 import json
+import os
 
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes, hmac, serialization, asymmetric
@@ -290,14 +291,47 @@ def split_affixes(filename):
     return prefix, filename, suffix
 
 
-def decrypt_filename(filename, aes_key64, key_holder_id=None):
-    """Convenience for the scripts: on-disk name -> plaintext name.
+_UNSAFE_CHARS = set("/\\\0") | {chr(c) for c in range(32)}
+_WINDOWS_RESERVED = {"CON", "PRN", "AUX", "NUL"} | {"COM%d" % i for i in range(1, 10)} | {"LPT%d" % i for i in range(1, 10)}
 
-    Keeps a leading '~$' (MS-Office lock files) in clear, strips a trailing '.bc', and returns the input
-    (minus '.bc') unchanged when it is not a decryptable encrypted name (filename encryption off, foreign key
-    holder, or not Base4K at all)."""
+
+def safe_component(name):
+    """Make a decrypted name usable as ONE path component on every platform.
+
+    A decrypted name is attacker-controlled data as far as the file system is concerned: it may contain path
+    separators (both kinds), NUL or control characters, or be '.' / '..'.  Those are neutralised here so that
+    joining the result onto the destination directory can never escape it.  Windows reserved device names get
+    a leading underscore as well."""
+    cleaned = "".join("_" if c in _UNSAFE_CHARS else c for c in name)
+    if cleaned in ("", ".", ".."):
+        cleaned = "_" + cleaned
+    if cleaned.split(".")[0].upper() in _WINDOWS_RESERVED:
+        cleaned = "_" + cleaned
+    return cleaned
+
+
+def is_inside(path, root):
+    """True when `path` resolves to `root` or to something below it (both resolved with realpath)."""
+    real_root = os.path.realpath(root)
+    real_path = os.path.realpath(path)
+    return real_path == real_root or real_path.startswith(real_root.rstrip(os.sep) + os.sep)
+
+
+def decrypt_filename(filename, aes_key64, key_holder_id=None, is_directory=False):
+    """Convenience for the scripts: on-disk name -> plaintext name, safe to use as one path component.
+
+    Files: a leading '~$' (MS-Office lock files) stays in clear and a trailing '.bc' is stripped; when the name
+    is not a decryptable encrypted name (filename encryption off, foreign key holder, not Base4K) the result is
+    the input minus '.bc', as the tools always did.
+    Directories: nothing is stripped; an undecryptable directory name is returned unchanged, so that a plain
+    folder called 'archives.bc' keeps its name instead of merging into 'archives'."""
+    if is_directory:
+        try:
+            return safe_component(decrypt_name(filename, aes_key64, key_holder_id))
+        except Exception:
+            return filename
     prefix, core, suffix = split_affixes(filename)
     try:
-        return prefix + decrypt_name(core, aes_key64, key_holder_id).replace("/", "_").replace("\0", "")
+        return prefix + safe_component(decrypt_name(core, aes_key64, key_holder_id))
     except Exception:
         return prefix + core

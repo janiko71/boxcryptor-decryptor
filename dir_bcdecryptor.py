@@ -97,9 +97,16 @@ def decrypt_file(filename):
         # as a sibling of the source root, with every folder and file name decrypted.
         relative_dir = os.path.relpath(data_directory, source_root)
         components   = [] if (relative_dir == ".") else relative_dir.split(os.sep)
-        output_dir   = os.path.join(dest_root, *[fnnames.decrypt_filename(c, filename_key, keyfile.user_id) for c in components])
-        os.makedirs(output_dir, exist_ok=True)
+        output_dir   = os.path.join(dest_root, *[fnnames.decrypt_filename(c, filename_key, keyfile.user_id, is_directory=True) for c in components])
         new_filename = os.path.join(output_dir, fnnames.decrypt_filename(encrypted_data_filename, filename_key, keyfile.user_id))
+
+        # Decrypted names are untrusted data: never let one escape the destination tree
+        if (not fnnames.is_inside(new_filename, dest_root)):
+            logging.error("Refusing to write outside the destination tree: " + encrypted_data_filename)
+            print(Fore.RED + "Refusing to write outside the destination tree, skipping: " + encrypted_data_filename + Fore.RESET)
+            return
+
+        os.makedirs(output_dir, exist_ok=True)
         logging.info("Decrypted name: " + encrypted_data_filename + " -> " + os.path.relpath(new_filename, dest_root))
 
     """
