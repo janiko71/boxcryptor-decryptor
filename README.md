@@ -38,14 +38,32 @@ To be completed, but Python 3 with the [Cryptography](https://cryptography.io/en
 ### Encrypted file names (filename encryption)
 If you had enabled Boxcryptor's *filename encryption*, your files and folders have names made of CJK-looking
 characters, such as `倐姁宸壮凕娗吓墭塽堦䃸.bc`. Both tools decrypt those names as well, using the `keys.filename`
-entry of your `.bckey` (it is unlocked with your password through the *wrapping key*). ```bcdecryptor.py```
-writes the output file under its real name; ```dir_bcdecryptor.py``` writes the whole tree, with every folder
-and file name decrypted, into a sibling folder of the encrypted one (named after the decrypted root folder).
-Without filename encryption the behaviour is unchanged: files are decrypted in place, next to the `.bc` file.
+entry of your `.bckey` (it is unlocked with your password through the *wrapping key*).
+
+* ```bcdecryptor.py``` writes the output file under its real name.
+* ```dir_bcdecryptor.py``` writes the whole tree into a **sibling folder** of the encrypted one, named after the
+  decrypted root folder: every directory is recreated with its decrypted name (empty ones included), every `.bc`
+  file is decrypted, and files that are not Boxcryptor containers are copied as they are. `FolderKey.bch`, the
+  per-folder key container, is not copied. Without filename encryption the behaviour is unchanged: files are
+  decrypted in place, next to the `.bc` file.
+
+Decrypted names are treated as untrusted input: path separators, control characters and `.`/`..` are
+neutralised, and nothing is ever written outside the destination folder. Existing output files are **not
+overwritten** and two encrypted names that decrypt to the same path (also when they differ only by case, which
+collides on Windows and macOS) are reported and the second one skipped; pass `-f` / `--overwrite` to allow
+overwriting. Only single-user key files are supported; names encrypted for groups are left as they are.
 
 The name format (Secomba's open-source [Base4K](https://github.com/secomba/base4k) encoding of a tag, a key
 holder hash, a 5-byte HMAC and a length-preserving two-pass AES-CFB ciphertext) is documented and implemented in
-```res/fnnames.py```. Single-user key files only; names encrypted for groups are left as they are.
+```res/fnnames.py```.
+
+### Tests
+```
+pip install pytest
+pytest
+```
+The tests use the vendor's Base4K vectors, frozen filename-cipher vectors under a disclosed key, and a synthetic
+vault (key export + encrypted tree) generated with a fresh RSA key, so no real key or data is needed.
 
 ## So, what is my conclusion?
 First, I'm proud of myself: I've understood all the underlying crypto! And coded all that into Python! And it works!
