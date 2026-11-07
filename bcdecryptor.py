@@ -50,6 +50,7 @@ from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 import res.bcexportkeyfile as bckeyfile
 import res.bcdatafile as bcdatafile
 import res.fnhelper as helper
+import res.fnnames as fnnames
 
 
 
@@ -116,10 +117,10 @@ keyfile = bckeyfile.ExportKeyFile(bckey_filepath)
 """
     Reading data filepath
 """
-if (arguments.get("file")):
+if (arguments.get("filepath")):
     
     # Data filepath in commande line
-    data_filepath = arguments.get("file")
+    data_filepath = arguments.get("filepath")
     
 else:
     
@@ -310,6 +311,41 @@ helper.print_parameter("Private key decryption and importation", "OK")
 
 
 #
+# Filename key (optional)
+# =======================
+#
+# --> Present when filename encryption was enabled. keys.filename in the .bckey is a "wrapped blob"
+#     (IV | HMAC-SHA256 | AES-256-CBC) encrypted with the wrapping key, which is itself a wrapped blob
+#     encrypted with the password key. The plaintext is a 64-byte AesKey (encryption half | hashing half).
+#     Encrypted names are Base4K strings; see res/fnnames.py for the format and the cipher.
+#
+
+filename_key = None
+
+if (keyfile.filename_key_wrapped_bytes is not None):
+
+    try:
+        wrapping_key = fnnames.decrypt_wrapped(keyfile.wrapping_key_bytes, crypto_key, hmac_key)
+        filename_key = fnnames.decrypt_wrapped(keyfile.filename_key_wrapped_bytes, wrapping_key[:32], wrapping_key[32:64])
+        wrapping_key = None
+        helper.print_parameter("Filename key decryption", "OK")
+
+    except Exception as e:
+        helper.print_parameter("Filename key decryption", "KO (" + str(e) + "), names will stay encrypted")
+
+else:
+
+    helper.print_parameter("Filename key", "none in key file (filename encryption was not enabled)")
+
+if (filename_key is not None):
+
+    decrypted_filename = fnnames.decrypt_filename(encrypted_data_filename, filename_key, keyfile.user_id)
+    if (decrypted_filename != encrypted_data_filename[:-3]):
+        new_filename = decrypted_filename
+        helper.print_parameter("File name (decrypted)", new_filename)
+
+
+#
 # --> File key: AES encryption key used to encrypt or decrypt a file. Every file has its own unique and random file key.
 #
 # file_aes_key_encrypted is the AES key encrypted with the user's public key
@@ -373,7 +409,10 @@ t0 = time.time()
     Decrypts all the blocks
 """
 f_in  = open(data_filepath, "rb")
-f_out = open(new_filename, "wb")   # Yes, we overwrite the output file
+if (os.path.exists(new_filename) and not arguments.get("overwrite")):
+    print(Fore.RED + "Output file already exists, refusing to overwrite (use -f/--overwrite): " + new_filename + Fore.RESET)
+    exit(1)
+f_out = open(new_filename, "wb")
 
 # Read the 1st block (header), not used here
 f_in.read(offset)

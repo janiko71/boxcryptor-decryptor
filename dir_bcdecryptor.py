@@ -55,6 +55,7 @@ from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 import res.bcexportkeyfile as bckeyfile
 import res.bcdatafile as bcdatafile
 import res.fnhelper as helper
+import res.fnnames as fnnames
 
 
 #
@@ -69,9 +70,32 @@ LOG_LEVEL = logging.DEBUG
 #
 # ===========================================================================
 
+output_paths_claimed = set()
+nb_skipped_files = 0
+
+def claim_output_path(path):
+
+    """
+        Collision / overwrite guard for one output path.
+
+        Two different encrypted names may decrypt to the same plaintext name, or to names that only differ
+        by case (which collide on Windows and macOS), and a previous run may have left files behind.
+        Unless -f/--overwrite was given, an output path is written at most once per run and never over
+        an existing file.
+    """
+
+    key = os.path.normcase(os.path.realpath(path)).casefold()
+    if (key in output_paths_claimed):
+        return False
+    if (os.path.exists(path) and not overwrite_outputs):
+        return False
+    output_paths_claimed.add(key)
+    return True
+
+
 def decrypt_file(filename):
 
-    global nb_encrypted_files, nb_decrypted_files
+    global nb_encrypted_files, nb_decrypted_files, nb_skipped_files
 
     """
         Constructing output file name
@@ -83,8 +107,34 @@ def decrypt_file(filename):
 
     if (encrypted_data_fileext != ".bc"):
         logging.info("Error: the file you want to decrypt has a bad suffix (filename:" + encrypted_data_filename + ")")
-    else:
+        return
+
+    if (filename_key is None):
+
+        # No filename encryption: decrypt in place, next to the .bc file (historical behaviour)
         new_filename = os.path.join(data_directory, encrypted_data_filename[:-3])
+
+    else:
+
+        # Filename encryption: every path component is encrypted too, so the plaintext tree is written
+        # as a sibling of the source root, with every folder and file name decrypted.
+        output_dir   = dir_map.get(data_directory, dest_root)     # directories were mapped and created above
+        new_filename = os.path.join(output_dir, fnnames.decrypt_filename(encrypted_data_filename, filename_key, keyfile.user_id))
+
+        # Decrypted names are untrusted data: never let one escape the destination tree
+        if (not fnnames.is_inside(new_filename, dest_root)):
+            logging.error("Refusing to write outside the destination tree: " + encrypted_data_filename)
+            print(Fore.RED + "Refusing to write outside the destination tree, skipping: " + encrypted_data_filename + Fore.RESET)
+            return
+
+        os.makedirs(output_dir, exist_ok=True)
+        logging.info("Decrypted name: " + encrypted_data_filename + " -> " + os.path.relpath(new_filename, dest_root))
+
+    if (not claim_output_path(new_filename)):
+        nb_skipped_files = nb_skipped_files + 1
+        logging.warning("Output exists or collides with another decrypted file, skipping: " + new_filename)
+        print(Fore.YELLOW + "Skipping (output exists or collides, use -f to overwrite): " + os.path.basename(new_filename) + Fore.RESET)
+        return
 
     """
         Reading data file itself
@@ -116,7 +166,6 @@ def decrypt_file(filename):
     logging.info("AES file key decryption OK, decrypting \'" + filename + "\'")
     crypto_key = the_file_aes_key[32:64]
     # ==> only if you want it
-    logging.debug("AES file key:" + crypto_key.hex()) 
 
     #
     # Decrypt the encrypted file key using the user’s private key. Decrypt the encrypted data using the file key.
@@ -298,6 +347,8 @@ else:
 """
 print('-'*72)
 helper.print_parameter("Data directory", data_filepath)
+overwrite_outputs = bool(arguments.get("overwrite"))
+helper.print_parameter("Overwrite existing outputs", "yes" if overwrite_outputs else "no (use -f/--overwrite)")
  
 
 
@@ -430,6 +481,88 @@ the_private_key = serialization.load_der_private_key(
 
 helper.print_parameter("Private key decryption and importation", "OK")
 
+
+#
+# Filename key (optional)
+# =======================
+#
+# --> Present when filename encryption was enabled. keys.filename in the .bckey is a "wrapped blob"
+#     (IV | HMAC-SHA256 | AES-256-CBC) encrypted with the wrapping key, which is itself a wrapped blob
+#     encrypted with the password key. The plaintext is a 64-byte AesKey (encryption half | hashing half).
+#     Encrypted names are Base4K strings; see res/fnnames.py for the format and the cipher.
+#
+
+filename_key = None
+
+if (keyfile.filename_key_wrapped_bytes is not None):
+
+    try:
+        wrapping_key = fnnames.decrypt_wrapped(keyfile.wrapping_key_bytes, crypto_key, hmac_key)
+        filename_key = fnnames.decrypt_wrapped(keyfile.filename_key_wrapped_bytes, wrapping_key[:32], wrapping_key[32:64])
+        wrapping_key = None
+        helper.print_parameter("Filename key decryption", "OK")
+
+    except Exception as e:
+        helper.print_parameter("Filename key decryption", "KO (" + str(e) + "), names will stay encrypted")
+
+else:
+
+    helper.print_parameter("Filename key", "none in key file (filename encryption was not enabled)")
+
+"""
+    Output location
+"""
+source_root = os.path.abspath(data_filepath.rstrip(os.sep))
+dest_root   = None
+
+if (filename_key is not None):
+
+    root_name = fnnames.decrypt_filename(os.path.basename(source_root), filename_key, keyfile.user_id, is_directory=True)
+    if (root_name == os.path.basename(source_root)):
+        root_name = root_name + "_decrypted"      # root folder name was not encrypted
+    dest_root = os.path.join(os.path.dirname(source_root), root_name)
+    helper.print_parameter("Decrypted root folder", dest_root)
+
+"""
+    Output tree (filename encryption only)
+
+    Every directory of the source tree is recreated under dest_root with its decrypted name, empty ones
+    included, and files that are not Boxcryptor containers are copied as they are. FolderKey.bch, the
+    per-folder key container, is not copied: it has no meaning outside the encrypted tree.
+"""
+dir_map = {}            # source directory -> destination directory
+nb_plain_copied = 0
+
+if (dest_root is not None):
+
+    dir_map[source_root] = dest_root
+
+    for current_dir, subdirs, files in os.walk(source_root):
+
+        subdirs.sort()
+        out_dir = dir_map[current_dir]
+        os.makedirs(out_dir, exist_ok=True)
+
+        for d in subdirs:
+            target = os.path.join(out_dir, fnnames.decrypt_filename(d, filename_key, keyfile.user_id, is_directory=True))
+            if (not fnnames.is_inside(target, dest_root)):
+                target = os.path.join(out_dir, "_" + d)
+            dir_map[os.path.join(current_dir, d)] = target
+
+        for f in files:
+            if (f == "FolderKey.bch") or f.endswith(".bc"):
+                continue
+            target = os.path.join(out_dir, fnnames.decrypt_filename(f, filename_key, keyfile.user_id))
+            if (not fnnames.is_inside(target, dest_root)) or (not claim_output_path(target)):
+                nb_skipped_files = nb_skipped_files + 1
+                logging.warning("Plain file not copied (exists or collides): " + os.path.join(current_dir, f))
+                continue
+            shutil.copy2(os.path.join(current_dir, f), target)
+            nb_plain_copied = nb_plain_copied + 1
+
+    helper.print_parameter("Directories created", str(len(dir_map)))
+    helper.print_parameter("Plain (non-.bc) files copied", str(nb_plain_copied))
+
 print('-'*72)
 
 
@@ -454,6 +587,8 @@ for file in file_list:
     decrypt_file(file)
 
 print()
+helper.print_parameter("Nb of files decrypted", nb_decrypted_files)
+helper.print_parameter("Nb of files skipped (existing/collision)", nb_skipped_files)
 
 #
 # Notes:
