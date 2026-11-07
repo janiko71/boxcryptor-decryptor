@@ -26,6 +26,7 @@ import getpass
 import time
 import logging
 import shutil
+import unicodedata
 from datetime import datetime
 
 from colorama import Fore, Back, Style 
@@ -71,7 +72,16 @@ LOG_LEVEL = logging.DEBUG
 # ===========================================================================
 
 output_paths_claimed = set()
+output_directories_claimed = set()
 nb_skipped_files = 0
+nb_skipped_dirs = 0
+
+def output_path_key(path):
+
+    """Portable key for detecting output collisions across case- and normalization-insensitive filesystems."""
+    normalized = os.path.normcase(os.path.realpath(path))
+    return unicodedata.normalize("NFD", normalized).casefold()
+
 
 def claim_output_path(path):
 
@@ -84,8 +94,10 @@ def claim_output_path(path):
         an existing file.
     """
 
-    key = os.path.normcase(os.path.realpath(path)).casefold()
-    if (key in output_paths_claimed):
+    key = output_path_key(path)
+    if (key in output_paths_claimed) or (key in output_directories_claimed):
+        return False
+    if (os.path.isdir(path)):
         return False
     if (os.path.exists(path) and not overwrite_outputs):
         return False
@@ -321,6 +333,8 @@ else:
     # no => input()
     data_filepath = str(input("Data filepath: "))
 
+# Use the same absolute source paths for the destination map and the later file traversal.
+data_filepath = os.path.abspath(data_filepath)
 
 """
     Now reading key file (mandatory)
@@ -521,6 +535,10 @@ if (filename_key is not None):
     if (root_name == os.path.basename(source_root)):
         root_name = root_name + "_decrypted"      # root folder name was not encrypted
     dest_root = os.path.join(os.path.dirname(source_root), root_name)
+    if (os.path.islink(dest_root)):
+        logging.error("Refusing to use a symbolic link as the decrypted destination: " + dest_root)
+        print(Fore.RED + "Refusing to write through a symbolic link destination: " + dest_root + Fore.RESET)
+        exit(1)
     helper.print_parameter("Decrypted root folder", dest_root)
 
 """
@@ -536,6 +554,7 @@ nb_plain_copied = 0
 if (dest_root is not None):
 
     dir_map[source_root] = dest_root
+    output_directories_claimed.add(output_path_key(dest_root))
 
     for current_dir, subdirs, files in os.walk(source_root):
 
@@ -543,11 +562,25 @@ if (dest_root is not None):
         out_dir = dir_map[current_dir]
         os.makedirs(out_dir, exist_ok=True)
 
-        for d in subdirs:
+        for d in list(subdirs):
+            source_child = os.path.join(current_dir, d)
             target = os.path.join(out_dir, fnnames.decrypt_filename(d, filename_key, keyfile.user_id, is_directory=True))
             if (not fnnames.is_inside(target, dest_root)):
                 target = os.path.join(out_dir, "_" + d)
-            dir_map[os.path.join(current_dir, d)] = target
+
+            target_key = output_path_key(target)
+            if ((not fnnames.is_inside(target, dest_root))
+                    or (target_key in output_directories_claimed)
+                    or (target_key in output_paths_claimed)
+                    or (os.path.lexists(target) and not os.path.isdir(target))):
+                nb_skipped_dirs = nb_skipped_dirs + 1
+                logging.warning("Output directory collides or escapes destination, skipping: " + source_child)
+                print(Fore.YELLOW + "Skipping directory (output collision): " + d + Fore.RESET)
+                subdirs.remove(d)
+                continue
+
+            output_directories_claimed.add(target_key)
+            dir_map[source_child] = target
 
         for f in files:
             if (f == "FolderKey.bch") or f.endswith(".bc"):
@@ -561,6 +594,7 @@ if (dest_root is not None):
             nb_plain_copied = nb_plain_copied + 1
 
     helper.print_parameter("Directories created", str(len(dir_map)))
+    helper.print_parameter("Directories skipped (collision)", str(nb_skipped_dirs))
     helper.print_parameter("Plain (non-.bc) files copied", str(nb_plain_copied))
 
 print('-'*72)
