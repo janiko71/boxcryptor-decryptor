@@ -217,6 +217,86 @@ class DirDecryptorTests(unittest.TestCase):
         rc, out = run_tool("bcdecryptor.py", [src, "-b", self.v.key_path, "-p", PASSWORD, "-f"], workdir)
         self.assertEqual(rc, 0, out)
 
+    def test_relative_source_path_preserves_nested_output_tree(self):
+        source_parent = os.path.dirname(self.root)
+        rc, out = run_tool(
+            "dir_bcdecryptor.py",
+            [os.path.basename(self.root), "-b", self.v.key_path, "-p", PASSWORD],
+            source_parent,
+        )
+        self.assertEqual(rc, 0, out)
+        self.assertTrue(os.path.isdir(os.path.join(self.dest, "Photos 2016")), out)
+        with open(os.path.join(self.dest, "Photos 2016", "img001.jpg"), "rb") as f:
+            self.assertEqual(f.read(), self.expected[os.path.join("Photos 2016", "img001.jpg")])
+
+    def test_destination_symlink_is_refused(self):
+        outside = os.path.join(self.tmp, "outside")
+        os.makedirs(outside)
+        os.symlink(outside, self.dest)
+
+        rc, out = self.run_dir()
+
+        self.assertNotEqual(rc, 0, out)
+        self.assertIn("symbolic link destination", out)
+        self.assertEqual(os.listdir(outside), [])
+
+    def test_directory_name_collision_skips_later_subtree(self):
+        first = os.path.join(self.root, self.v.enc("Collision"))
+        second = os.path.join(self.root, self.v.enc("collision"))
+        os.makedirs(first)
+        os.makedirs(second)
+        self.v.bc_file(first, "first.txt", b"first")
+        self.v.bc_file(second, "second.txt", b"second")
+
+        rc, out = self.run_dir()
+
+        self.assertEqual(rc, 0, out)
+        output_dir = os.path.join(self.dest, "Collision")
+        self.assertTrue(os.path.isdir(output_dir), out)
+        self.assertEqual(
+            sum(os.path.exists(os.path.join(output_dir, name)) for name in ("first.txt", "second.txt")),
+            1,
+            out,
+        )
+        self.assertEqual(counter(out, "Directories skipped (collision)"), 1, out)
+
+    def test_file_name_colliding_with_directory_is_skipped(self):
+        source_dir = os.path.join(self.root, self.v.enc("Shared"))
+        os.makedirs(source_dir)
+        self.v.bc_file(source_dir, "inside.txt", b"inside")
+        self.v.bc_file(self.root, "shared", b"file conflicts with directory")
+
+        rc, out = self.run_dir()
+
+        self.assertEqual(rc, 0, out)
+        output_dir = os.path.join(self.dest, "Shared")
+        self.assertTrue(os.path.isdir(output_dir), out)
+        with open(os.path.join(output_dir, "inside.txt"), "rb") as f:
+            self.assertEqual(f.read(), b"inside")
+        # One skip is the case-only collision already included in setUp; the second is this file/directory conflict.
+        self.assertEqual(counter(out, "Nb of files skipped (existing/collision)"), 2, out)
+
+    def test_unicode_normalization_directory_collision_is_detected(self):
+        composed = os.path.join(self.root, self.v.enc("café"))
+        decomposed = os.path.join(self.root, self.v.enc("cafe\u0301"))
+        os.makedirs(composed)
+        os.makedirs(decomposed)
+        self.v.bc_file(composed, "first.txt", b"first")
+        self.v.bc_file(decomposed, "second.txt", b"second")
+
+        rc, out = self.run_dir()
+
+        self.assertEqual(rc, 0, out)
+        output_dirs = [name for name in os.listdir(self.dest) if name.casefold() in ("café", "cafe\u0301")]
+        self.assertEqual(len(output_dirs), 1, out)
+        output_dir = os.path.join(self.dest, output_dirs[0])
+        self.assertEqual(
+            sum(os.path.exists(os.path.join(output_dir, name)) for name in ("first.txt", "second.txt")),
+            1,
+            out,
+        )
+        self.assertEqual(counter(out, "Directories skipped (collision)"), 1, out)
+
 
 if __name__ == "__main__":
     unittest.main()
