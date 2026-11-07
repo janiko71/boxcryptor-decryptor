@@ -107,7 +107,7 @@ def claim_output_path(path):
 
 def decrypt_file(filename):
 
-    global nb_encrypted_files, nb_decrypted_files, nb_skipped_files
+    global nb_decrypted_files, nb_skipped_files
 
     """
         Constructing output file name
